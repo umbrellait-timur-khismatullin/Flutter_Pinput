@@ -4,7 +4,10 @@ class _PinItem extends StatelessWidget {
   final _PinputState state;
   final int index;
 
-  const _PinItem({required this.state, required this.index});
+  const _PinItem({
+    required this.state,
+    required this.index,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +28,9 @@ class _PinItem extends StatelessWidget {
           switchInCurve: state.widget.animationCurve,
           switchOutCurve: state.widget.animationCurve,
           duration: state.widget.animationDuration,
-          transitionBuilder: _getTransition,
+          transitionBuilder: (child, animation) {
+            return _getTransition(child, animation);
+          },
           child: _buildFieldContent(index, pinTheme),
         ),
       ),
@@ -45,7 +50,9 @@ class _PinItem extends StatelessWidget {
     /// Focused pin or default
     if (state.hasFocus &&
         index == state.selectedIndex.clamp(0, state.widget.length - 1)) {
-      return _pinThemeOrDefault(state.widget.focusedPinTheme);
+      return state.widget.length == state.selectedIndex
+          ? state.widget.submittedPinTheme!
+          : _pinThemeOrDefault(state.widget.focusedPinTheme);
     }
 
     /// Submitted pin or default
@@ -72,12 +79,30 @@ class _PinItem extends StatelessWidget {
       if (state.widget.obscureText && state.widget.obscuringWidget != null) {
         return SizedBox(key: key, child: state.widget.obscuringWidget);
       }
-
-      return Text(
-        state.widget.obscureText ? state.widget.obscuringCharacter : pin[index],
-        key: key,
-        style: pinTheme.textStyle,
-      );
+      if ((state.widget.length - 1) == index &&
+          state.effectiveFocusNode.hasFocus) {
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            Text(
+              state.widget.obscureText
+                  ? state.widget.obscuringCharacter
+                  : pin[index],
+              key: key,
+              style: pinTheme.textStyle,
+            ),
+            _buildCursor(pinTheme),
+          ],
+        );
+      } else {
+        return Text(
+          state.widget.obscureText
+              ? state.widget.obscuringCharacter
+              : pin[index],
+          key: key,
+          style: pinTheme.textStyle,
+        );
+      }
     }
 
     final isActiveField = index == pin.length;
@@ -111,7 +136,7 @@ class _PinItem extends StatelessWidget {
     );
   }
 
-  Widget _getTransition(Widget child, Animation<double> animation) {
+  Widget _getTransition(Widget child, Animation animation) {
     if (child is _PinputAnimatedCursor) {
       return child;
     }
@@ -121,26 +146,26 @@ class _PinItem extends StatelessWidget {
         return child;
       case PinAnimationType.fade:
         return FadeTransition(
-          opacity: animation,
+          opacity: animation as Animation<double>,
           child: child,
         );
       case PinAnimationType.scale:
         return ScaleTransition(
-          scale: animation,
+          scale: animation as Animation<double>,
           child: child,
         );
       case PinAnimationType.slide:
         return SlideTransition(
           position: Tween<Offset>(
             begin:
-                state.widget.slideTransitionBeginOffset ?? const Offset(0.8, 0),
+            state.widget.slideTransitionBeginOffset ?? const Offset(0.8, 0),
             end: Offset.zero,
-          ).animate(animation),
+          ).animate(animation as Animation<double>),
           child: child,
         );
       case PinAnimationType.rotation:
         return RotationTransition(
-          turns: animation,
+          turns: animation as Animation<double>,
           child: child,
         );
     }
